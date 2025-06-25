@@ -15,47 +15,56 @@ class OrderController extends Controller
         return view('orders.checkout');
     }
 
-    public function proccesCheckout(Request $request){
-        // dd('proccesCheckout');
-        $this->validate($request,[
+    public function proccesCheckout(Request $request)
+    {
+        $this->validate($request, [
             'name' => 'required',
             'last_name' => 'required',
             'email' => 'required|email',
             'phone' => 'required',
             'address' => 'required',
         ]);
-
-        DB::transaction(function () use($request) {
-
-            $order = New Order();
-            $order->total = Cart::instance('shopping')->priceTotal();
-            $order->notes = $request->get('notes');
-            $order->status = "Pending";
-            $order->fecha = date('Y-m-d');
-            $order->user_id = auth()->user()->id;
-            $order->save();
-
-            //agregar items
-
-            foreach(Cart::instance('shopping')->content() as $product){
-                $item = new Item();
-                $item->name = $product->name;
-                $item->price = $product->price;
-                $item->qty = $product->qty;
-                $item->image = $product->options->image;
-                $item->product_id = $product->id;
-                $item->fecha = date('Y-m-d');
-                $item->save();
-
-                $order->items()->attach($item->id,['qty'=>$product->qty,'fecha'=>date('Y-m-d')]);
-
-            }
+    
+        DB::transaction(function () use ($request) {
+            $order = $this->createOrder($request);
+            $this->attachItemsToOrder($order);
         });
-
+    
         Cart::instance('shopping')->destroy();
-
-        return redirect()->route('home')->with(['msg'=>'Orden creada correctamente.']);
+    
+        return redirect()->route('home')->with('msg', 'Orden creada correctamente.');
     }
+    
+    private function createOrder(Request $request): Order
+    {
+        return Order::create([
+            'total'    => Cart::instance('shopping')->priceTotal(),
+            'notes'    => $request->input('notes'),
+            'status'   => 'Pending',
+            'fecha'    => now()->toDateString(),
+            'user_id'  => auth()->id(),
+        ]);
+    }
+    
+    private function attachItemsToOrder(Order $order): void
+    {
+        foreach (Cart::instance('shopping')->content() as $product) {
+            $item = Item::create([
+                'name'       => $product->name,
+                'price'      => $product->price,
+                'qty'        => $product->qty,
+                'image'      => $product->options->image,
+                'product_id' => $product->id,
+                'fecha'      => now()->toDateString(),
+            ]);
+    
+            $order->items()->attach($item->id, [
+                'qty'   => $product->qty,
+                'fecha' => now()->toDateString(),
+            ]);
+        }
+    }
+    
 
     public function myOrders(){
         $orders = auth()->user()->orders()->paginate(5);
