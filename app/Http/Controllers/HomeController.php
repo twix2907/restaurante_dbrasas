@@ -6,6 +6,7 @@ use App\Models\Slider;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\Support\Renderable;
 
 class HomeController extends Controller
 {
@@ -24,7 +25,7 @@ class HomeController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function index()
+    public function index(): Renderable
     {
         $sliders = Slider::all();
         $categories = Category::all();
@@ -34,7 +35,8 @@ class HomeController extends Controller
         return view('home',compact('sliders','categories','banner','products'));
     }
 
-    public function shop(){
+    public function shop(): Renderable
+    {
         $products = Product::orderBy('id','desc')->paginate(4);
 
         return view('shop',compact('products'));
