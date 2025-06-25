@@ -37,37 +37,43 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate($request,[
+        // Validación de entrada
+        $validatedData = $request->validate([
             'name' => 'required|max:255',
-            'description' => 'max:255',
-            'price' => 'required|min:0|numeric',
-            'label' => 'max:255',
-            'category' => 'required|numeric|min:0',
-            'image' => 'image|mimes:jpeg,png|max:1024|required'
-
+            'description' => 'nullable|max:255',
+            'price' => 'required|numeric|min:0',
+            'label' => 'nullable|max:255',
+            'category' => 'required|integer|min:0',
+            'image' => 'required|image|mimes:jpeg,png|max:1024'
         ]);
-
-        $product = new Product();
-        $product->name = $request->get('name');
-        $product->description = $request->get('description');
-        $product->price = $request->get('price');
-        $product->label = $request->get('label');
-        $product->category_id = $request->get('category');
-
-        if($request->hasFile('image')){
-
-            $imagen = $request->file('image');
-            $nameImage = "images/products/".uniqid().'.'.$imagen->guessExtension();
-            $ruta = public_path("images/products/");
-            $imagen->move($ruta,$nameImage);
-            $product->image = $nameImage;
-
+    
+        // Crear nuevo producto
+        $product = new Product([
+            'name' => $validatedData['name'],
+            'description' => $validatedData['description'] ?? null,
+            'price' => $validatedData['price'],
+            'label' => $validatedData['label'] ?? null,
+            'category_id' => $validatedData['category'],
+        ]);
+    
+        // Procesamiento de la imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = uniqid() . '.' . $image->extension();
+            $imagePath = public_path('images/products');
+    
+            $image->move($imagePath, $imageName);
+    
+            $product->image = 'images/products/' . $imageName;
         }
-
+    
         $product->save();
-
-        return redirect()->route('products.index')->with(["msg"=>"Producto creado correctamente"]);
+    
+        return redirect()
+            ->route('products.index')
+            ->with('msg', 'Producto creado correctamente');
     }
+    
 
     /**
      * Display the specified resource.
